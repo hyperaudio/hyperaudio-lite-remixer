@@ -68,6 +68,35 @@ test.describe('<hyperaudio-remixer> custom element', () => {
     expect(text).toBe('Hello, hello. Okay.');
   });
 
+  test('dragging a selected phrase onto the mix stage adds a clip', async ({ page }) => {
+    await openReady(page);
+    await page.waitForFunction(() => document.querySelector('#hr-player').readyState >= 1);
+
+    // Select words 0..2, then drag the selection with real pointer events.
+    await page.evaluate(() => {
+      const spans = [...document.querySelectorAll('#hr-transcript span[data-m]')];
+      const range = document.createRange();
+      range.setStart(spans[0].firstChild, 0);
+      range.setEnd(spans[2].firstChild, spans[2].firstChild.length);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    });
+
+    const word1 = await page.locator('#hr-transcript span[data-m]').nth(1).boundingBox();
+    const stage = await page.locator('#hr-stage').boundingBox();
+    await page.mouse.move(word1.x + word1.width / 2, word1.y + word1.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(stage.x + stage.width / 2, stage.y + 30, { steps: 12 });
+    await page.mouse.up();
+
+    await expect(page.locator('#hr-stage .hr-clip')).toHaveCount(1);
+    const text = await page.evaluate(
+      () => document.querySelector('#hr-stage .hr-clip').firstChild.textContent
+    );
+    expect(text).toBe('Hello, hello. Okay.');
+  });
+
   test('builds a two-source mix through the element API', async ({ page }) => {
     await openReady(page);
 

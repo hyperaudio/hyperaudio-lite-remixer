@@ -16,7 +16,17 @@
   #hr-transcript span[data-m] { cursor: pointer; }
   #hr-transcript .read { color: #999; }
   #hr-transcript .active { background: #ffd54a; border-radius: 3px; }
-  #hr-stage:empty::before { content: "No clips yet — select words on the left and Add to mix."; color: #999; }
+  #hr-stage { min-height: 140px; border-radius: 6px; }
+  #hr-stage:empty::before { content: "No clips yet — select a phrase on the left and drag it here (or use Add to mix)."; color: #999; display: block; padding: 8px; }
+  #hr-stage.hr-dropok { outline: 2px dashed #ffb300; outline-offset: 4px; background: #fff8e1; }
+  #hr-transcript span[data-m]::selection { background: #ffe082; }
+  .hr-drag-ghost {
+    position: fixed; z-index: 1000; pointer-events: none;
+    max-width: 260px; padding: 6px 10px; font-size: 13px;
+    background: #263238; color: #fff; border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3); opacity: 0.95;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .hr-clip { padding: 6px 8px; margin: 4px 0; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; font-size: 13px; }
   .hr-clip.playing { border-color: #ffb300; background: #fff8e1; }
   .hr-meta { color: #888; font-size: 11px; }

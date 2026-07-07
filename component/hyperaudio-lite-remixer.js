@@ -98,6 +98,15 @@ class HyperaudioRemixer extends HTMLElement {
     this.querySelector('[data-role="pause"]').addEventListener('click', () => this.pause());
     this.querySelector('[data-role="add"]').addEventListener('click', () => this.addSelection());
 
+    // Custom pointer-based drag (works with mouse + touch, unlike native DnD):
+    // select a phrase, then grab it and drag a floating ghost onto the mix stage.
+    this._drag = null;
+    this._onMove = e => this._onPointerMove(e);
+    this._onUp = e => this._onPointerUp(e);
+    this.querySelector('#hr-transcript').addEventListener('pointerdown', e => this._onPointerDown(e));
+    window.addEventListener('pointermove', this._onMove);
+    window.addEventListener('pointerup', this._onUp);
+
     this.loadSource(this._sources[0]).then(() => {
       this.ready = true;
       this._emit('hyperaudioRemixerReady', {});
@@ -105,6 +114,9 @@ class HyperaudioRemixer extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.removeEventListener('pointermove', this._onMove);
+    window.removeEventListener('pointerup', this._onUp);
+    this._removeGhost();
     if (this.mixPlayer) this.mixPlayer.destroy();
     if (this._hla && this._hla.destroy) this._hla.destroy();
   }
@@ -141,6 +153,85 @@ class HyperaudioRemixer extends HTMLElement {
     if (!spans.length) return null;
     sel.removeAllRanges();
     return this._commitClip(spans);
+  }
+
+  // --- custom pointer drag: grab a selected phrase, drop on the mix stage ---
+
+  _onPointerDown(e) {
+    if (e.button != null && e.button !== 0) return; // primary button / touch only
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return; // need a selection to drag
+    const targetSpan = e.target.closest && e.target.closest('#hr-transcript span[data-m]');
+    if (!targetSpan) return;
+    const range = sel.getRangeAt(0);
+    if (!rangeCoversWord(range, targetSpan)) return; // pressed outside the selection → let it be
+    const spans = this._words().filter(s => rangeCoversWord(range, s));
+    if (!spans.length) return;
+
+    // Keep the selection intact and start a *potential* drag (activates on move).
+    e.preventDefault();
+    this._drag = {
+      spans,
+      text: spans.map(s => s.textContent).join('').trim(),
+      startX: e.clientX,
+      startY: e.clientY,
+      active: false,
+    };
+  }
+
+  _onPointerMove(e) {
+    const drag = this._drag;
+    if (!drag) return;
+    if (!drag.active) {
+      if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 6) return;
+      drag.active = true;
+      this._startGhost(drag.text);
+      document.body.style.userSelect = 'none';
+    }
+    e.preventDefault();
+    this._moveGhost(e.clientX, e.clientY);
+    this._stageEl.classList.toggle('hr-dropok', this._isOverStage(e.clientX, e.clientY));
+  }
+
+  _onPointerUp(e) {
+    const drag = this._drag;
+    if (!drag) return;
+    this._drag = null;
+    this._removeGhost();
+    document.body.style.userSelect = '';
+    this._stageEl.classList.remove('hr-dropok');
+    if (drag.active && this._isOverStage(e.clientX, e.clientY)) {
+      this._commitClip(drag.spans);
+      const sel = window.getSelection();
+      if (sel) sel.removeAllRanges();
+    }
+  }
+
+  _isOverStage(x, y) {
+    const r = this._stageEl.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  }
+
+  _startGhost(text) {
+    const g = document.createElement('div');
+    g.className = 'hr-drag-ghost';
+    g.textContent = text.length > 60 ? text.slice(0, 57) + '…' : text;
+    document.body.appendChild(g);
+    this._ghost = g;
+  }
+
+  _moveGhost(x, y) {
+    if (this._ghost) {
+      this._ghost.style.left = x + 14 + 'px';
+      this._ghost.style.top = y + 14 + 'px';
+    }
+  }
+
+  _removeGhost() {
+    if (this._ghost) {
+      this._ghost.remove();
+      this._ghost = null;
+    }
   }
 
   _commitClip(spans) {
