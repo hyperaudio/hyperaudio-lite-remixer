@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hyperaudio Pad (next) — vanilla remix, no Popcorn</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 20px; }
+  h1 { font-size: 15px; color: #555; }
+  .cols { display: flex; gap: 24px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  video { width: 100%; background: #000; border-radius: 6px; }
+  .toolbar { margin: 8px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: inherit; padding: 5px 10px; border: 1px solid #bbb; border-radius: 5px; background: #f7f7f7; cursor: pointer; }
+  button:hover { background: #eee; }
+  #hypertranscript { line-height: 1.7; max-height: 340px; overflow: auto; }
+  #hypertranscript span[data-m] { cursor: pointer; }
+  #hypertranscript .read { color: #999; }
+  #hypertranscript .active { background: #ffd54a; border-radius: 3px; }
+  #stage:empty::before { content: "No clips yet — select words on the left and Add to mix."; color: #999; }
+  .clip { padding: 6px 8px; margin: 4px 0; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; font-size: 13px; }
+  .clip.playing { border-color: #ffb300; background: #fff8e1; }
+  .clip .meta { color: #888; font-size: 11px; }
+</style>
+</head>
+<body>
+<h1>Hyperaudio Pad (next) — source transcript via hyperaudio-lite, remix scheduler in vanilla JS, zero Popcorn</h1>
+<div class="cols">
+  <div class="col">
+    <strong>Source</strong>
+    <div class="toolbar">
+      <button data-load="clip-a">Load Clip A</button>
+      <button data-load="clip-b">Load Clip B</button>
+      <button id="add-selection">Add selection to mix →</button>
+    </div>
+    <video id="hyperplayer" controls playsinline></video>
+    <div id="hypertranscript"></div>
+  </div>
+  <div class="col">
+    <strong>Mix</strong>
+    <div class="toolbar">
+      <button id="mix-play">Play</button>
+      <button id="mix-pause">Pause</button>
+    </div>
+    <video id="mixplayer" controls playsinline></video>
+    <div id="stage"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { mountTranscriptPanel } from './transcript-panel.mjs';
+  import { Mix } from './mix.mjs';
+  import { MixPlayer } from './mix-player.mjs';
+
+  const mix = new Mix();
+  const mixVideo = document.getElementById('mixplayer');
+  const mixPlayer = new MixPlayer(mixVideo, mix);
+  const stageEl = document.getElementById('stage');
+
+  const PAD = (window.__PAD__ = {
+    mix,
+    mixPlayer,
+    currentSrc: null,
+    currentClip: null,
+    ready: false,
+    loadSource,
+    addClip,
+    addSelection,
+  });
+
+  mixPlayer.onClipChange = i => {
+    [...stageEl.children].forEach((el, n) => el.classList.toggle('playing', n === i));
+  };
+
+  async function loadSource(clip) {
+    // Tear down the previous hyperaudio-lite instance before remounting.
+    if (window.__PANEL__ && window.__PANEL__.hla && window.__PANEL__.hla.destroy) {
+      try { window.__PANEL__.hla.destroy(); } catch (e) {}
+    }
+    const { mediaUrl } = await mountTranscriptPanel({ clip });
+    PAD.currentSrc = mediaUrl;
+    PAD.currentClip = clip;
+  }
+
+  function currentSpans() {
+    return [...document.querySelectorAll('#hypertranscript span[data-m]')];
+  }
+
+  function addClip({ startIndex = 0, count = 6 } = {}) {
+    const spans = currentSpans().slice(startIndex, startIndex + count);
+    if (!spans.length) return null;
+    const text = spans.map(s => s.textContent).join('').trim();
+    const clip = mix.addClip(Mix.clipFromWords(spans, PAD.currentSrc));
+    renderClip(clip, text);
+    return clip;
+  }
+
+  function addSelection() {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || sel.isCollapsed) return null;
+    const range = sel.getRangeAt(0);
+    const spans = currentSpans().filter(s => range.intersectsNode(s));
+    if (!spans.length) return null;
+    const text = spans.map(s => s.textContent).join('').trim();
+    const clip = mix.addClip(Mix.clipFromWords(spans, PAD.currentSrc));
+    renderClip(clip, text);
+    sel.removeAllRanges();
+    return clip;
+  }
+
+  function renderClip(clip, text) {
+    const el = document.createElement('div');
+    el.className = 'clip';
+    const name = clip.src.split('/').pop();
+    el.innerHTML =
+      `<div>${text || '(clip)'}</div>` +
+      `<div class="meta">${name} · ${clip.start.toFixed(1)}–${clip.end.toFixed(1)}s</div>`;
+    stageEl.appendChild(el);
+  }
+
+  document.querySelectorAll('[data-load]').forEach(b =>
+    b.addEventListener('click', () => loadSource(b.getAttribute('data-load')))
+  );
+  document.getElementById('add-selection').addEventListener('click', addSelection);
+  document.getElementById('mix-play').addEventListener('click', () => mixPlayer.play());
+  document.getElementById('mix-pause').addEventListener('click', () => mixPlayer.pause());
+
+  // Boot with Clip A loaded.
+  loadSource('clip-a').then(() => { PAD.ready = true; });
+</script>
+</body>
+</html>

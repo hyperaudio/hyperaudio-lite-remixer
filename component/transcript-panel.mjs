@@ -43,6 +43,6 @@ export async function mountTranscriptPanel(options = {}) {
   });
 
   // Test/debug surface, mirroring the old harness's window.__HA_TEST__.
-  window.__PANEL__ = { hla, clip };
-  return hla;
+  window.__PANEL__ = { hla, clip, mediaUrl };
+  return { hla, clip, mediaUrl };
 }
