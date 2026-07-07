@@ -26,9 +26,13 @@
     "hyperaudio-lib": "git://github.com/hyperaudio/hyperaudio-lib.git#master"
   },
   "scripts": {
-    "build": "grunt"
+    "build": "grunt",
+    "serve": "node test/serve.mjs 8777",
+    "fixtures": "node test/tools/make-fixtures.mjs",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "grunt": "~0.4.1",
     "grunt-cli": "^1.2.0",
     "grunt-contrib-concat": "~0.3.0",

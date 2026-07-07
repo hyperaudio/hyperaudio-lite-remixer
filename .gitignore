@@ -2,3 +2,11 @@
 node_modules
 videos
 
+# Generated fixture media (conference clips, not ours to redistribute).
+# Regenerate with: node test/tools/make-fixtures.mjs
+test/fixtures/media/
+
+# Playwright output
+test-results/
+playwright-report/
+
