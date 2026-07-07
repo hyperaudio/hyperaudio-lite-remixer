@@ -16,18 +16,23 @@
  * preloading can layer on next to remove the reload gap without changing this API.)
  */
 export class MixPlayer {
-  constructor(video, mix) {
+  constructor(video, mix, { debug = false } = {}) {
     this.video = video;
     this.mix = mix;
     this.index = 0;
     this._playing = false;
     this._loadedSrc = null;
     this._raf = 0;
+    this.debug = debug;
     this.onClipChange = null;
     this.onEnded = null;
     this._tick = this._tick.bind(this);
     this._onTime = () => this._checkBoundary();
     this.video.addEventListener('timeupdate', this._onTime);
+  }
+
+  _log(...args) {
+    if (this.debug) console.log('[mixplayer]', ...args);
   }
 
   /** Point the video at clip[i] and cue it to the clip's in-point. */
@@ -43,6 +48,11 @@ export class MixPlayer {
       );
     }
     this.video.currentTime = clip.start;
+    this._log(
+      `load clip #${i} ${clip.src.split('/').pop()}`,
+      `in=${clip.start.toFixed(3)}s out=${clip.end.toFixed(3)}s (dur ${clip.duration.toFixed(3)}s)`,
+      `→ video.currentTime=${this.video.currentTime.toFixed(3)}`
+    );
     if (this.onClipChange) this.onClipChange(i, clip);
   }
 
@@ -113,6 +123,12 @@ export class MixPlayer {
 
   _advance() {
     this._stopTicking();
+    const clip = this.mix.clips[this.index];
+    this._log(
+      `boundary clip #${this.index} at video.currentTime=${this.video.currentTime.toFixed(3)}`,
+      `(cut at out+trim=${(clip.end + clip.trim).toFixed(3)}s) →`,
+      this.index + 1 < this.mix.clips.length ? `advance to #${this.index + 1}` : 'end of mix'
+    );
     if (this.index + 1 < this.mix.clips.length) {
       this._loadClip(this.index + 1).then(() => {
         if (this._playing) {

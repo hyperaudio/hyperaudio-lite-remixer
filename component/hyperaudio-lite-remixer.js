@@ -73,8 +73,11 @@ class HyperaudioRemixer extends HTMLElement {
 
     this.innerHTML = TEMPLATE;
 
+    this.debug = this.hasAttribute('debug');
     this.mix = new Mix();
-    this.mixPlayer = new MixPlayer(this.querySelector('#hr-mix-player'), this.mix);
+    this.mixPlayer = new MixPlayer(this.querySelector('#hr-mix-player'), this.mix, {
+      debug: this.debug,
+    });
     this._stageEl = this.querySelector('#hr-stage');
     this.mixPlayer.onClipChange = i => {
       [...this._stageEl.children].forEach((el, n) => el.classList.toggle('playing', n === i));
@@ -143,6 +146,16 @@ class HyperaudioRemixer extends HTMLElement {
   _commitClip(spans) {
     const text = spans.map(s => s.textContent).join('').trim();
     const clip = this.mix.addClip(Mix.clipFromWords(spans, this.currentSrc));
+    if (this.debug) {
+      const first = spans[0];
+      const last = spans[spans.length - 1];
+      console.log(
+        `[remixer] +clip #${this.mix.clips.length - 1} "${text}" (${spans.length} words)`,
+        `\n  first word "${first.textContent.trim()}" data-m=${first.getAttribute('data-m')}`,
+        `\n  last  word "${last.textContent.trim()}" data-m=${last.getAttribute('data-m')} data-d=${last.getAttribute('data-d')}`,
+        `\n  → clip in=${clip.start.toFixed(3)}s out=${clip.end.toFixed(3)}s dur=${clip.duration.toFixed(3)}s`
+      );
+    }
     this._renderClip(clip, text);
     this._emit('hyperaudioRemixerClipAdded', { clip, text });
     this._emit('hyperaudioRemixerMixChanged', { clips: this.mix.clips });

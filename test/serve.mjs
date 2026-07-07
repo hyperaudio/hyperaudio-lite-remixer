@@ -62,6 +62,7 @@ createServer((req, res) => {
         'Accept-Ranges': 'bytes',
         'Content-Range': `bytes ${start}-${end}/${size}`,
         'Content-Length': end - start + 1,
+        'Cache-Control': 'no-store',
       });
       createReadStream(filePath, { start, end }).pipe(res);
     } else {
@@ -69,6 +70,8 @@ createServer((req, res) => {
         'Content-Type': type,
         'Accept-Ranges': 'bytes',
         'Content-Length': size,
+        // Dev server: never cache, so code edits always take effect on reload.
+        'Cache-Control': 'no-store',
       });
       createReadStream(filePath).pipe(res);
     }
