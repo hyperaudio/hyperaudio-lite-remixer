@@ -4,7 +4,7 @@
 const { test, expect } = require('@playwright/test');
 
 async function openPad(page) {
-  await page.goto('/component/pad-demo.html');
+  await page.goto('/component/remixer-demo.html');
   await page.waitForFunction(() => window.__PAD__ && window.__PAD__.ready);
 }
 
@@ -12,7 +12,7 @@ async function loadSource(page, clip) {
   await page.evaluate(c => window.__PAD__.loadSource(c), clip);
   await page.waitForFunction(
     c =>
-      document.querySelectorAll('#hypertranscript span[data-m]').length > 0 &&
+      document.querySelectorAll('#hr-transcript span[data-m]').length > 0 &&
       window.__PAD__.currentSrc &&
       window.__PAD__.currentSrc.includes(c),
     clip
@@ -59,7 +59,7 @@ test.describe('multi-source mix scheduler (vanilla, no Popcorn)', () => {
     await page.evaluate(t => window.__PAD__.mixPlayer.seek(t), intoClip2);
 
     await page.waitForFunction(() => window.__PAD__.mixPlayer.index === 1);
-    const src = await page.evaluate(() => document.querySelector('#mixplayer').src);
+    const src = await page.evaluate(() => document.querySelector('#hr-mix-player').src);
     expect(src).toContain('clip-b.mp4');
   });
 
@@ -74,7 +74,7 @@ test.describe('multi-source mix scheduler (vanilla, no Popcorn)', () => {
     });
 
     await page.waitForFunction(() => window.__PAD__.mixPlayer.index === 1, null, { timeout: 8000 });
-    const src = await page.evaluate(() => document.querySelector('#mixplayer').src);
+    const src = await page.evaluate(() => document.querySelector('#hr-mix-player').src);
     expect(src).toContain('clip-b.mp4');
   });
 });

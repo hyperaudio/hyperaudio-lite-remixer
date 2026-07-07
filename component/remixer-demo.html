@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hyperaudio Remixer — demo</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 20px; }
+  h1 { font-size: 15px; color: #555; }
+  hyperaudio-remixer .hr-cols { display: flex; gap: 24px; align-items: flex-start; }
+  .hr-col { flex: 1; min-width: 0; }
+  video { width: 100%; background: #000; border-radius: 6px; }
+  .hr-toolbar { margin: 8px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: inherit; padding: 5px 10px; border: 1px solid #bbb; border-radius: 5px; background: #f7f7f7; cursor: pointer; }
+  button:hover { background: #eee; }
+  #hr-transcript { line-height: 1.7; max-height: 340px; overflow: auto; }
+  #hr-transcript span[data-m] { cursor: pointer; }
+  #hr-transcript .read { color: #999; }
+  #hr-transcript .active { background: #ffd54a; border-radius: 3px; }
+  #hr-stage:empty::before { content: "No clips yet — select words on the left and Add to mix."; color: #999; }
+  .hr-clip { padding: 6px 8px; margin: 4px 0; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; font-size: 13px; }
+  .hr-clip.playing { border-color: #ffb300; background: #fff8e1; }
+  .hr-meta { color: #888; font-size: 11px; }
+</style>
+</head>
+<body>
+<h1>Hyperaudio Remixer — source transcript via hyperaudio-lite, remix scheduler in vanilla JS, zero Popcorn</h1>
+
+<hyperaudio-remixer sources="clip-a,clip-b"></hyperaudio-remixer>
+
+<script>
+  // Back-compat test hook: expose the element instance as window.__PAD__ so the
+  // module-level scheduler.spec (written against the pre-element wiring) keeps working.
+  document.addEventListener('hyperaudioRemixerReady', e => { window.__PAD__ = e.target; });
+</script>
+<script type="module" src="./hyperaudio-lite-remixer.js"></script>
+</body>
+</html>
