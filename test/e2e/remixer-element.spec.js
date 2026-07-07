@@ -45,6 +45,29 @@ test.describe('<hyperaudio-remixer> custom element', () => {
     expect(types).toContain('hyperaudioRemixerMixChanged');
   });
 
+  test('selection does not over-capture the word after it (off-by-one)', async ({ page }) => {
+    await openReady(page);
+
+    const text = await page.evaluate(() => {
+      const el = document.querySelector('hyperaudio-remixer');
+      const spans = [...el.querySelectorAll('#hr-transcript span[data-m]')];
+      // End the selection exactly at the START of word 4 — the boundary that
+      // Range.intersectsNode() would wrongly count as selecting word 4.
+      const range = document.createRange();
+      range.setStart(spans[0].firstChild, 0);
+      range.setEnd(spans[3], 0);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      el.addSelection();
+      return el.querySelector('#hr-stage .hr-clip').firstChild.textContent;
+    });
+
+    // Words 0..2 only — "Hey" (word 3) must NOT be included.
+    expect(text).toBe('Hello, hello. Okay.');
+  });
+
   test('builds a two-source mix through the element API', async ({ page }) => {
     await openReady(page);
 

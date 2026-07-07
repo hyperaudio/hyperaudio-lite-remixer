@@ -23,6 +23,23 @@ import { mountTranscriptPanel } from './transcript-panel.mjs';
 import { Mix } from './mix.mjs';
 import { MixPlayer } from './mix-player.mjs';
 
+/**
+ * True only when the selection genuinely overlaps a word's content — not when it
+ * merely touches the word's leading boundary. Browser selections often set their
+ * end at offset 0 of the *next* span; Range.intersectsNode() counts that as a hit
+ * and captures a phantom trailing word (a classic off-by-one). Strict boundary
+ * comparison excludes those touch-only spans.
+ */
+function rangeCoversWord(range, span) {
+  const wr = document.createRange();
+  wr.selectNodeContents(span);
+  const covers =
+    range.compareBoundaryPoints(Range.END_TO_START, wr) < 0 && // selection starts before word ends
+    range.compareBoundaryPoints(Range.START_TO_END, wr) > 0; // selection ends after word starts
+  wr.detach && wr.detach();
+  return covers;
+}
+
 const TEMPLATE = `
   <div class="hr-cols">
     <div class="hr-col hr-source">
@@ -117,7 +134,7 @@ class HyperaudioRemixer extends HTMLElement {
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount || sel.isCollapsed) return null;
     const range = sel.getRangeAt(0);
-    const spans = this._words().filter(s => range.intersectsNode(s));
+    const spans = this._words().filter(s => rangeCoversWord(range, s));
     if (!spans.length) return null;
     sel.removeAllRanges();
     return this._commitClip(spans);
