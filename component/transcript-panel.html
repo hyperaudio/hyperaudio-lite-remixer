@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Source transcript panel — hyperaudio-lite (de-Popcorn)</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 24px; max-width: 720px; }
+  h1 { font-size: 16px; color: #555; font-weight: 600; }
+  #hyperplayer { width: 480px; max-width: 100%; background: #000; border-radius: 6px; }
+  #hypertranscript { margin-top: 16px; line-height: 1.7; }
+  #hypertranscript span[data-m] { cursor: pointer; }
+  #hypertranscript .read { color: #999; }
+  #hypertranscript .active { background: #ffd54a; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>Source transcript panel — driven by hyperaudio-lite, no Popcorn</h1>
+<video id="hyperplayer" controls playsinline></video>
+<div id="hypertranscript"></div>
+
+<script type="module">
+  import { mountTranscriptPanel } from './transcript-panel.mjs';
+  const clip = new URLSearchParams(location.search).get('t') || 'clip-a';
+  mountTranscriptPanel({ clip });
+</script>
+</body>
+</html>
