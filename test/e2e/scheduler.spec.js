@@ -52,6 +52,26 @@ test.describe('multi-source mix scheduler (vanilla, no Popcorn)', () => {
     expect(await page.evaluate(() => typeof window.Popcorn)).toBe('undefined');
   });
 
+  test('clip durations are exact word-timing lengths — no arbitrary tail', async ({ page }) => {
+    await buildTwoSourceMix(page, 6);
+
+    const clips = await page.evaluate(() =>
+      window.__PAD__.mix.clips.map(c => ({
+        start: c.start,
+        end: c.end,
+        trim: c.trim,
+        duration: c.duration,
+        span: c.totalEnd - c.totalStart,
+      }))
+    );
+
+    for (const c of clips) {
+      expect(c.trim).toBe(0); // no leftover 1s overrun
+      expect(c.duration).toBeCloseTo(c.end - c.start, 3); // exactly the words' span
+      expect(c.span).toBeCloseTo(c.duration, 3); // timeline switches on the exact duration
+    }
+  });
+
   test('seeking into the second clip switches the mix video to that source', async ({ page }) => {
     await buildTwoSourceMix(page);
 

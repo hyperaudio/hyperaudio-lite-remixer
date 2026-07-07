@@ -5,10 +5,15 @@
  * one timeline, swapping the media `src` at clip boundaries, and maps mix-time
  * seeks onto the right clip. This is the vanilla reimplementation of the old
  * pad's Projector.manager/cue sequencing — which already ran on native <video>
- * `timeupdate`, so no Popcorn was involved to begin with.
+ * events, so no Popcorn was involved.
  *
- * (v1 uses one video element; the old pad used two for gapless cross-fades.
- * Two-element preloading can be layered on later without changing this API.)
+ * Boundary timing: each clip's exact end is known from the word durations
+ * (clip.end + clip.trim, in source seconds), so we switch precisely there. We
+ * watch it with requestAnimationFrame (frame-accurate) and keep a `timeupdate`
+ * listener as a fallback for when rAF is throttled (e.g. a backgrounded tab).
+ *
+ * (v1 uses one video element; the old pad used two for gapless swaps. Two-element
+ * preloading can layer on next to remove the reload gap without changing this API.)
  */
 export class MixPlayer {
   constructor(video, mix) {
@@ -17,9 +22,11 @@ export class MixPlayer {
     this.index = 0;
     this._playing = false;
     this._loadedSrc = null;
+    this._raf = 0;
     this.onClipChange = null;
     this.onEnded = null;
-    this._onTime = this._onTime.bind(this);
+    this._tick = this._tick.bind(this);
+    this._onTime = () => this._checkBoundary();
     this.video.addEventListener('timeupdate', this._onTime);
   }
 
@@ -44,10 +51,12 @@ export class MixPlayer {
     if (!this.mix.clips.length) return;
     if (this._loadedSrc === null) await this._loadClip(this.index); // fresh start → cue clip 0
     await this.video.play();
+    this._startTicking();
   }
 
   pause() {
     this._playing = false;
+    this._stopTicking();
     this.video.pause();
   }
 
@@ -66,25 +75,60 @@ export class MixPlayer {
     return clip.totalStart + Math.max(0, this.video.currentTime - clip.start);
   }
 
-  _onTime() {
-    if (!this._playing) return;
+  // --- boundary detection ---------------------------------------------------
+
+  /** The source-time at which the current clip should hand off. */
+  _boundary() {
     const clip = this.mix.clips[this.index];
-    if (!clip) return;
-    // Advance once this clip has played out to end + trim.
-    if (this.video.currentTime >= clip.end + clip.trim - 0.02) {
-      if (this.index + 1 < this.mix.clips.length) {
-        this._loadClip(this.index + 1).then(() => {
-          if (this._playing) this.video.play();
-        });
-      } else {
-        this._playing = false;
-        this.video.pause();
-        if (this.onEnded) this.onEnded();
-      }
+    return clip ? clip.end + clip.trim : Infinity;
+  }
+
+  /** Returns true (and advances) if the current clip has reached its end. */
+  _checkBoundary() {
+    if (!this._playing) return false;
+    if (this.video.currentTime >= this._boundary()) {
+      this._advance();
+      return true;
+    }
+    return false;
+  }
+
+  _startTicking() {
+    this._stopTicking();
+    this._raf = requestAnimationFrame(this._tick);
+  }
+
+  _stopTicking() {
+    if (this._raf) {
+      cancelAnimationFrame(this._raf);
+      this._raf = 0;
+    }
+  }
+
+  _tick() {
+    if (!this._playing) return;
+    if (this._checkBoundary()) return; // _advance re-arms the loop
+    this._raf = requestAnimationFrame(this._tick);
+  }
+
+  _advance() {
+    this._stopTicking();
+    if (this.index + 1 < this.mix.clips.length) {
+      this._loadClip(this.index + 1).then(() => {
+        if (this._playing) {
+          this.video.play();
+          this._startTicking();
+        }
+      });
+    } else {
+      this._playing = false;
+      this.video.pause();
+      if (this.onEnded) this.onEnded();
     }
   }
 
   destroy() {
+    this._stopTicking();
     this.video.removeEventListener('timeupdate', this._onTime);
   }
 }

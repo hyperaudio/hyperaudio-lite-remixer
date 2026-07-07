@@ -11,14 +11,19 @@
  * hypertranscript spans for interop with the editor.
  */
 export class Mix {
-  constructor({ trim = 1 } = {}) {
+  constructor({ trim = 0 } = {}) {
     this.clips = [];
-    this.trim = trim; // seconds the last word of a clip plays out (old pad default: 1)
+    // Extra tail seconds played after the last word. Default 0 => cut exactly at
+    // the last word's end (which we know from data-d). The old pad hard-coded 1s
+    // because it had no per-word durations; that overrun is what made switches
+    // feel late. Kept as a knob for a future user-facing trim control.
+    this.trim = trim;
     this.duration = 0;
   }
 
-  addClip({ src, start, end }, at) {
-    const clip = { src, start, end, trim: this.trim };
+  addClip({ src, start, end, trim }, at) {
+    const t = trim == null ? this.trim : trim;
+    const clip = { src, start, end, trim: t, duration: end - start + t };
     if (at == null || at >= this.clips.length) this.clips.push(clip);
     else this.clips.splice(at, 0, clip);
     this._recompute();
@@ -33,8 +38,9 @@ export class Mix {
   _recompute() {
     let t = 0;
     for (const c of this.clips) {
+      c.duration = c.end - c.start + c.trim; // exact play-out length of this clip
       c.totalStart = t;
-      t += c.end + c.trim - c.start; // play-out duration of this clip
+      t += c.duration;
       c.totalEnd = t;
     }
     this.duration = t;
