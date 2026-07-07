@@ -11172,9 +11172,21 @@ var Projector = (function(window, document, hyperaudio, Popcorn) {
         // Still have attributes hard coded in here. Would need to pass from the transcript to stage and then to here.
         var words = el.getElementsByTagName('a');
         if (words.length) {
+          var lastWord = words[words.length - 1];
           section.start = words[0].getAttribute(this.options.timeAttr) * unit;
-          section.end = words[words.length - 1].getAttribute(this.options.timeAttr) * unit;
-          section.trim = this.options.trim;
+          var lastStart = lastWord.getAttribute(this.options.timeAttr) * unit;
+          // Cut at the last word's true end when we know its duration (data-d),
+          // so the clip stops exactly when the words end. Fall back to the old
+          // behaviour (last word start + trim) for transcripts without durations,
+          // so their last word is not clipped.
+          var lastDur = parseInt(lastWord.getAttribute('data-d'), 10);
+          if (!isNaN(lastDur)) {
+            section.end = lastStart + lastDur * unit;
+            section.trim = 0;
+          } else {
+            section.end = lastStart;
+            section.trim = this.options.trim;
+          }
         }
 
         // Get the effect details

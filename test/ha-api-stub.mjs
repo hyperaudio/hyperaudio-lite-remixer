@@ -57,7 +57,7 @@ api.getTranscript = function (id, callback) {
       self.transcript = {
         _id: fixtureId,
         label: json.label || fixtureId,
-        content: toHypertranscript(json, { wordTag: 'a' }),
+        content: toHypertranscript(json, { wordTag: 'a', duration: true }),
         media: {
           _id: `${fixtureId}-media`,
           source: { mp4: { url: `test/fixtures/media/${fixtureId}.mp4` } },

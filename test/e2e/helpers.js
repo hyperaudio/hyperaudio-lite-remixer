@@ -56,7 +56,12 @@ async function addClip(page, opts = {}) {
         startIndex + count
       );
       const wordsHTML = words
-        .map(w => `<a data-m="${w.getAttribute('data-m')}">${w.textContent}</a>`)
+        .map(w => {
+          const d = w.getAttribute('data-d');
+          // Carry data-d through, matching what the real drag copies from the
+          // selection — the Projector uses it to cut the clip at the word's end.
+          return `<a data-m="${w.getAttribute('data-m')}"${d ? ` data-d="${d}"` : ''}>${w.textContent}</a>`;
+        })
         .join('');
 
       const el = document.createElement('section');
