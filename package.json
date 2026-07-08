@@ -29,6 +29,7 @@
     "build": "grunt",
     "serve": "node test/serve.mjs 8777",
     "fixtures": "node test/tools/make-fixtures.mjs",
+    "sources": "node test/tools/make-sources.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

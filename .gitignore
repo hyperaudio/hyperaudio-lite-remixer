@@ -6,6 +6,13 @@ videos
 # Regenerate with: node test/tools/make-fixtures.mjs
 test/fixtures/media/
 
+# Full-talk sources are large + derived from ~/sites/atproto-conf; generate
+# locally with `npm run sources`. The two small test clips stay committed.
+test/fixtures/transcripts/*.json
+!test/fixtures/transcripts/clip-a.json
+!test/fixtures/transcripts/clip-b.json
+test/fixtures/sources.json
+
 # Playwright output
 test-results/
 playwright-report/

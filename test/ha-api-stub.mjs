@@ -14,12 +14,25 @@ import { toHypertranscript } from './tools/hypertranscript.mjs';
 const HA = window.HA;
 const api = HA.api;
 
-// Fixtures the side menu offers, in order.
+// Talk sources shown in the side menu, built by `node test/tools/make-sources.mjs`
+// (each is a full conference talk: transcript + video).
+let SOURCES = [];
+try {
+  SOURCES = await fetch('test/fixtures/sources.json').then(r => (r.ok ? r.json() : []));
+} catch (e) {
+  SOURCES = [];
+}
+
+// Clip fixtures used by the automated tests (loaded directly via ?t=clip-a).
 const FIXTURES = [
   { _id: 'clip-a', label: 'Clip A — intro', owner: '' },
   { _id: 'clip-b', label: 'Clip B — mid-talk', owner: '' },
 ];
-const DEFAULT_ID = 'clip-a'; // used when the pad asks for its hard-coded default transcript
+
+// Every id getTranscript can serve (talks + test clips).
+const KNOWN = new Set([...FIXTURES.map(f => f._id), ...SOURCES.map(s => s.id)]);
+// Default when the pad asks for its hard-coded default transcript: first talk.
+const DEFAULT_ID = SOURCES[0] ? SOURCES[0].id : 'clip-a';
 
 const soon = (fn, self, arg) => setTimeout(() => fn && fn.call(self, arg), 0);
 
@@ -50,7 +63,7 @@ api.getBGM = function (callback) {
 // --- a single transcript: build hypertranscript HTML from the fixture JSON ---
 api.getTranscript = function (id, callback) {
   const self = this;
-  const fixtureId = FIXTURES.some(f => f._id === id) ? id : DEFAULT_ID;
+  const fixtureId = KNOWN.has(id) ? id : DEFAULT_ID;
   fetch(`test/fixtures/transcripts/${fixtureId}.json`)
     .then(r => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
     .then(json => {
@@ -137,6 +150,34 @@ window.__HA_TEST__ = {
   instances,
   FIXTURES,
   resetMixes: () => writeStore({}),
+};
+
+// --- side menu: list the talks flat, directly selectable ---
+// The real SideMenu buries items under on-demand channel folders (mirroring the
+// hyperaud.io API). For the harness we replace initTranscripts with a flat list
+// of the talk SOURCES; clicking one loads its transcript + video.
+HA.SideMenu.prototype.initTranscripts = function () {
+  const self = this;
+  const panel = self.transcripts; // #panel-media
+  panel.innerHTML = '';
+  for (const s of SOURCES) {
+    const li = document.createElement('li');
+    li.setAttribute('data-id', s.id);
+    li.textContent = s.label;
+    panel.appendChild(li);
+  }
+  panel._tap = new HA.Tap({ el: panel });
+  panel.addEventListener(
+    'tap',
+    function (e) {
+      const item = e.target.closest ? e.target.closest('li[data-id]') : null;
+      const id = item && item.getAttribute('data-id');
+      if (!id || !self.mediaCallback) return;
+      HA.Address.setParam('t', id);
+      self.mediaCallback(item);
+    },
+    false
+  );
 };
 
 // Kick off the app now that the API is stubbed.

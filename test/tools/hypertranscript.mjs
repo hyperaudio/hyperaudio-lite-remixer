@@ -19,6 +19,46 @@ const esc = s =>
 const toMs = seconds => Math.round(seconds * 1000);
 
 /**
+ * Parse hypertranscript HTML (`<p><span data-m data-d>word </span>…</p>`) back
+ * into { words:[{start,end,text}], paragraphs:[{start,end}] } (seconds).
+ * Speaker-label spans (data-d="0", text like "[speaker-1]") are dropped from the
+ * word list; paragraph boundaries come from the <p> elements.
+ * Regex-based (the markup is machine-generated and regular) — no DOM needed.
+ */
+export function parseHypertranscript(html) {
+  const decode = s =>
+    String(s).replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  // Grab each span's attributes + inner text, then read data-m / data-d from the
+  // attributes independently (order-agnostic, and data-d may be absent).
+  const spanRe = /<span\b([^>]*)>([\s\S]*?)<\/span>/gi;
+
+  const words = [];
+  const paragraphs = [];
+  const blocks = html.split(/<p\b[^>]*>/i).slice(1).map(b => b.split(/<\/p>/i)[0]);
+
+  for (const block of blocks) {
+    const para = [];
+    let m;
+    spanRe.lastIndex = 0;
+    while ((m = spanRe.exec(block)) !== null) {
+      const mAttr = /\bdata-m="(\d+)"/.exec(m[1]);
+      if (!mAttr) continue;
+      const start = parseInt(mAttr[1], 10);
+      const dAttr = /\bdata-d="(\d+)"/.exec(m[1]);
+      const dur = dAttr ? parseInt(dAttr[1], 10) : 0;
+      const text = decode(m[2]).trim();
+      if (!text || /^\[speaker/i.test(text)) continue; // skip labels/empties
+      para.push({ start: +(start / 1000).toFixed(3), end: +((start + dur) / 1000).toFixed(3), text });
+    }
+    if (para.length) {
+      words.push(...para);
+      paragraphs.push({ start: para[0].start, end: para[para.length - 1].end });
+    }
+  }
+  return { words, paragraphs };
+}
+
+/**
  * Slice a transcript to the window [t0, t1) (seconds) and rebase times so the
  * window starts at 0 — used to make a clip's transcript line up with a clip's
  * media that was cut from the same offset.
