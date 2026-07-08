@@ -73,4 +73,33 @@ test.describe('multi-source remix playback', () => {
       () => window.__HA_TEST__.instances.Projector.contentIndex === 1
     );
   });
+
+  test('playing a two-source mix advances across the boundary to the next source', async ({ page }) => {
+    await loadClip(page, 'clip-a');
+    await addClip(page, { count: 6, startIndex: 0 });
+    await switchTranscript(page, 'clip-b');
+    await addClip(page, { count: 6, startIndex: 0 });
+    await waitForContent(page, 2);
+
+    // Start playing just before clip-a ends so the cross-source switch is quick.
+    await page.evaluate(() => {
+      const proj = window.__HA_TEST__.instances.Projector;
+      const c0 = proj.content[0];
+      proj.play({ contentIndex: 0, start: c0.end - 0.4 }); // jumpTo start is source time
+    });
+
+    await page.waitForFunction(
+      () => window.__HA_TEST__.instances.Projector.contentIndex === 1,
+      null,
+      { timeout: 8000 }
+    );
+
+    // The now-active player is showing clip-b — the source actually switched.
+    const src = await page.evaluate(() => {
+      const proj = window.__HA_TEST__.instances.Projector;
+      const p = proj.player[proj.activePlayer];
+      return (p.videoElem && (p.videoElem.currentSrc || p.videoElem.src)) || '';
+    });
+    expect(src).toContain('clip-b.mp4');
+  });
 });
