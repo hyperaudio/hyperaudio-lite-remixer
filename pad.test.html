@@ -14,6 +14,22 @@
 
 <body>
 
+<!-- Test-harness only: quick media switcher (the real sidemenu buries fixtures
+     three folders deep). Load a clip, drag a phrase to the stage, switch, repeat. -->
+<div id="test-media-switch" style="position:fixed;top:62px;right:8px;z-index:99999;font:12px/1.4 system-ui,sans-serif;background:#fff;border:1px solid #ccc;border-radius:6px;padding:5px 7px;box-shadow:0 2px 6px rgba(0,0,0,.15)">
+	<span style="color:#888">test media:</span>
+	<button type="button" data-clip="clip-a">Clip A</button>
+	<button type="button" data-clip="clip-b">Clip B</button>
+</div>
+<script>
+	document.getElementById('test-media-switch').addEventListener('click', function (e) {
+		var clip = e.target.getAttribute && e.target.getAttribute('data-clip');
+		if (clip && window.__HA_TEST__ && window.__HA_TEST__.instances.Transcript) {
+			window.__HA_TEST__.instances.Transcript.load(clip);
+		}
+	});
+</script>
+
 <div id="wrapper">
 	<header id="header">
 		<h1><form id="mix-title-form"><input type="text" value="Untitled Mix - click to edit" id="mix-title" onfocus="if(this.value=='Untitled Mix - click to edit')this.value='Untitled Mix'"></input></form></h1>
