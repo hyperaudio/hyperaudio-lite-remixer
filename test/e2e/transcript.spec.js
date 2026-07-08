@@ -36,4 +36,33 @@ test.describe('transcript loading & word interaction', () => {
       { timeout: 4000 }
     );
   });
+
+  test('words are greyed ahead of the playhead and cleared behind it', async ({ page }) => {
+    await loadClip(page, 'clip-a');
+
+    // At t=0 most words are still in the future → greyed.
+    const initialGrey = await page.evaluate(
+      () => document.querySelectorAll('#transcript a.transcript-grey').length
+    );
+    expect(initialGrey).toBeGreaterThan(0);
+
+    // Play from ~word 20, let the highlighter run, then freeze and inspect.
+    await page.locator('#transcript a[data-m]').nth(20).click();
+    await page.waitForTimeout(700);
+    const state = await page.evaluate(() => {
+      const v = document.querySelector('#video-source video');
+      v.pause();
+      const t = v.currentTime * 1000;
+      const words = [...document.querySelectorAll('#transcript a[data-m]')];
+      const grey = w => w.classList.contains('transcript-grey');
+      const past = words.filter(w => +w.getAttribute('data-m') < t - 600);
+      const future = words.filter(w => +w.getAttribute('data-m') > t + 600);
+      return {
+        pastCleared: past.length > 0 && past.every(w => !grey(w)),
+        futureGrey: future.length > 0 && future.every(w => grey(w)),
+      };
+    });
+    expect(state.pastCleared).toBe(true); // words behind the playhead are un-greyed
+    expect(state.futureGrey).toBe(true); // words ahead stay greyed
+  });
 });
