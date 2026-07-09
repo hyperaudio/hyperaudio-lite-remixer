@@ -1,11 +1,11 @@
 {
-  "name": "hyperaudio-pad",
-  "version": "0.7.3",
-  "description": "The Hyperaudio Pad Library.",
-  "homepage": "http://hyperaud.io",
+  "name": "hyperaudio-lite-remixer",
+  "version": "0.8.0",
+  "description": "Hyperaudio transcript remixer, on the path to a vanilla-JS web component for the Hyperaudio Lite Editor.",
+  "homepage": "https://github.com/hyperaudio/hyperaudio-lite-remixer",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hyperaudio/hyperaudio-pad.git"
+    "url": "https://github.com/hyperaudio/hyperaudio-lite-remixer.git"
   },
   "keywords": [
     "audio",
@@ -18,9 +18,9 @@
     "Matteo Spinelli <matteo@cubiq.org> (http://cubiq.org)",
     "Laurian Gridinoc <laurian@gridinoc.name> (http://gridinoc.com)"
   ],
-  "license": "http://hyperaud.io/licensing/",
+  "license": "AGPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/hyperaudio/hyperaudio-pad/issues"
+    "url": "https://github.com/hyperaudio/hyperaudio-lite-remixer/issues"
   },
   "dependencies": {
     "hyperaudio-lib": "git://github.com/hyperaudio/hyperaudio-lib.git#master"
